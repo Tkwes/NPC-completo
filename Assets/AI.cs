@@ -31,27 +31,90 @@ namespace Panda.Examples.Shooter
         Vector3 enemyLastSeenPosition;
 
         [Task]
-        public bool Fire()
+        public void PickRandomDestination() //cria motodo para movimentacao randomica para destino do inimigo
+        {
+            Vector3 dest = new Vector3(Random.Range(-100, 100), 0, Random.Range(-100, 100));
+            agent.SetDestination(dest);//recebe sua nova posicao
+            Task.current.Succeed();//confirma sua chegada
+        }
+
+        [Task]
+        public bool IsHeathLessThan(float health)//verica se vivo
+        {
+            return this.health < health;
+        }
+
+        [Task]
+        public bool Explode()//destroi da cena objeto que nao tem vida
+        {
+            Destroy(healthBar.gameObject);//destroi barra de vida assim que zerada
+            Destroy(this.gameObject);//destroy o gameobjet
+            return true;
+        }
+
+        [Task]     
+            public bool Turn(float angle)//vira para segui alvo
+            {
+                var p = this.transform.position + Quaternion.AngleAxis(angle, Vector3.up) * this.transform.forward;
+                target = p;//passa a nova posicao para o bot
+                return true;
+            }        
+
+        [Task]
+        public bool SeePlayer()//confirma se esta vendo player
+        {
+            Vector3 distance = player.transform.position - this.transform.position;//calcula distancia para o player
+            RaycastHit hit;//cria para detecao de colisao com ray
+            bool seeWall = false; //confima colisao com parede
+            Debug.DrawRay(this.transform.position, distance, Color.red); 
+            if(Physics.Raycast(this.transform.position,distance,out hit))//testa colisao com a parede 
+            {
+                if (hit.collider.gameObject.tag == "wall")
+                {
+                    seeWall = true;
+                }
+            }
+            if (Task.isInspected)
+                Task.current.debugInfo = string.Format("wall={0}", seeWall);
+            if (distance.magnitude < visibleRange && !seeWall)
+                return true;
+            else
+                return false;
+        }
+
+        [Task]
+        public void LookAtTarget()//olha para o alvo
+        {
+            Vector3 direction = target - this.transform.position;//calcula distancia para o alvo
+            this.transform.rotation = Quaternion.Slerp(this.transform.rotation, Quaternion.LookRotation(direction), Time.deltaTime * rotSpeed);
+            if (Task.isInspected) 
+                Task.current.debugInfo = string.Format("angle+{0}", Vector3.Angle(this.transform.forward, direction));
+            if(Vector3.Angle(this.transform.forward,direction)<5.0f)
+            { Task.current.Succeed(); }
+        }
+
+        [Task]
+        public bool Fire()//disparo de objetos 
         {
             GameObject bullet = GameObject.Instantiate(bulletPrefab,
                                                        bulletSpawn.transform.position,
-                                                       bulletSpawn.transform.rotation);
-            bullet.GetComponent<Rigidbody>().AddForce(bullet.transform.forward * 2000);
+                                                       bulletSpawn.transform.rotation);//instancia objeto na cena 
+            bullet.GetComponent<Rigidbody>().AddForce(bullet.transform.forward * 2000);//adciona força ao gameobject
             return true;
         }
 
         [Task]
-        public void TargetPlayer()
+        public void TargetPlayer()//metodo que tranforma player em target
         {
-            target = player.transform.position;
+            target = player.transform.position; // adiciona ao target posicoes conhecidas do obejto
             Task.current.Succeed();
         }
 
         [Task]
-            public void PickDestination(int x, int z)
+            public void PickDestination(int x, int z)//seta posicao para movimentacao 
         {
-            Vector3 dest = new Vector3(x,0,z);
-            agent.SetDestination(dest);
+            Vector3 dest = new Vector3(x,0,z); 
+            agent.SetDestination(dest); 
             Task.current.Succeed();
         }
 
@@ -62,12 +125,12 @@ namespace Panda.Examples.Shooter
                 Task.current.debugInfo = string.Format("t={0:0.00}", Time.time);
             if(agent.remainingDistance <= agent.stoppingDistance && !agent.pathPending)
             {
-                Task.current.Succeed();
+                Task.current.Succeed();//confirma nova movimentacao para o bot 
             }
         }
 
         [Task]
-        bool SetTarget_Enemy()
+        public bool SetTarget_Enemy()
         {
             if (enemy != null)
             {
@@ -78,7 +141,7 @@ namespace Panda.Examples.Shooter
         }
 
         [Task]
-        bool SetTarget_EnemyLastSeenPosition()
+        public bool SetTarget_EnemyLastSeenPosition()
         {
             if (enemy != null)
             {
@@ -362,3 +425,4 @@ namespace Panda.Examples.Shooter
         }
     }
 }
+

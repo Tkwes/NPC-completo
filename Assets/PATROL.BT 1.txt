@@ -1,5 +1,5 @@
 tree("Root")
-	Sequence
+	sequence
 		PickRandomDestination(-100,-100)
 		MoveToDestination
 		PickRandomDestination(-100,	100)
